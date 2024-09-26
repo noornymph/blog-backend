@@ -1,5 +1,6 @@
 """Serializers of the application."""
 
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
@@ -15,6 +16,26 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = "__all__"
         read_only_fields = ("user",)
+
+
+class LoginSerializer(serializers.Serializer):
+    """Serializer for the login."""
+
+    username = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate(self, attrs):
+        user = authenticate(**attrs)
+        if not user:
+            raise serializers.ValidationError("Invalid username or password")
+        attrs["user"] = user
+        return attrs
+
+    def create(self, validated_data):
+        # You can choose to leave this empty if you don't plan to create a user instance
+        raise NotImplementedError(
+            "This serializer is for login and does not create a user."
+        )
 
 
 class UserSerializer(serializers.ModelSerializer):

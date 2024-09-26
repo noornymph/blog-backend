@@ -28,7 +28,7 @@ class Post(models.Model):
     )
     created = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     thumbnail = models.ImageField(upload_to="thumbnails/", null=True, blank=True)
-    is_public = models.BooleanField(default=True)  # Add this line
+    is_public = models.BooleanField(default=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:

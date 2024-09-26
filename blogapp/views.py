@@ -1,7 +1,7 @@
 """Views of the application."""
 
 from django.contrib.auth.models import User
-from rest_framework import generics, status, viewsets
+from rest_framework import generics, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     AllowAny,
@@ -11,8 +11,13 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from .models import Favorite, Follow, Post
-from .serializers import FollowSerializer, PostSerializer, UserSerializer
+from .models import Categories, Favorite, Follow, Post
+from .serializers import (
+    FollowSerializer,
+    LoginSerializer,
+    PostSerializer,
+    UserSerializer,
+)
 
 
 class UserRegisterView(generics.CreateAPIView):
@@ -51,18 +56,15 @@ class PostModelViewSet(ModelViewSet):
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=["GET"])
-    def by_category(self, request):
-        """Function for accessing posts by category."""
-        category = request.query_params.get("category")
-        if category:
-            posts = Post.objects.filter(category=category)
-            serializer = PostSerializer(posts, many=True)
-            return Response(serializer.data)
-        else:
-            return Response(
-                {"error": "Category not provided"}, status=status.HTTP_400_BAD_REQUEST
-            )
+    @action(detail=False, methods=["get"], url_path="category/(?P<category>[^/.]+)")
+    def by_category(self, request, category=None):
+        """Filter posts by category"""
+        if category not in Categories.values:
+            return Response({"error": "Invalid category"}, status=400)
+
+        posts = self.queryset.filter(category=category)
+        serializer = self.get_serializer(posts, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["POST"], permission_classes=[IsAuthenticated])
     def favorite(self, request, slug=None):
@@ -73,12 +75,33 @@ class PostModelViewSet(ModelViewSet):
 
 
 class FollowView(viewsets.ModelViewSet):
-    """API view for handling follow relationships between users."""
+    """View for handling follow relationships between users."""
 
     queryset = Follow.objects.all()
     permission_classes = [IsAuthenticated]
-    serializer_class = FollowSerializer  # You will need to create this serializer
+    serializer_class = FollowSerializer
 
     def perform_create(self, serializer):
         """Save a new follow instance with the authenticated user."""
         serializer.save(follower=self.request.user)
+
+
+class LoginView(generics.GenericAPIView):
+    """Viewset for handling user login."""
+
+    serializer_class = LoginSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """Handles the POST request for user login."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        refresh = RefreshToken.for_user(user)
+
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }
+        )
