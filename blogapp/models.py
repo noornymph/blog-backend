@@ -4,14 +4,29 @@ from django.db import models
 from django.utils.text import slugify
 
 
-# Create your models here.
+class Categories(models.TextChoices):
+    """Model for the categories of blog posts"""
+
+    WORLD = "world"
+    ENVIRONMENT = "environment"
+    TECHNOLOGY = "technology"
+    DESIGN = "design"
+    CULTURE = "culture"
+    BUSINESS = "business"
+    POLITICS = "politics"
+
+
 class Post(models.Model):
     """Model handling the blog posts."""
 
     title = models.CharField(max_length=200)
     content = models.TextField()
     slug = models.SlugField(unique=True, null=True, blank=True)
+    category = models.CharField(
+        max_length=50, choices=Categories.choices, default=Categories.WORLD
+    )
     created = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    thumbnail = models.ImageField(upload_to="thumbnails/", null=True, blank=True)
 
     class Meta:
         """Metadata about the Post model."""

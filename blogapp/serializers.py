@@ -12,7 +12,7 @@ class PostSerializer(serializers.ModelSerializer):
         """Metadata about post serializer."""
 
         model = Post
-        fields = ["id", "title", "content", "slug"]
+        fields = "__all__"
 
 
 # get_recent_blogs = http://127.0.0.1:8008/blogs/recent
