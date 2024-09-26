@@ -7,8 +7,9 @@ from . import views
 
 router = DefaultRouter()
 router.register("blogs", views.PostModelViewSet)
+router.register("follow", views.FollowView, basename="follow")
 
-urlpatterns = [path("", include(router.urls))]
-
-# get_recent_blogs = http://127.0.0.1:8008/blogs/recent
-# sepecific_blog = http://127.0.0.1:8008/blogs/:slug
+urlpatterns = [
+    path("", include(router.urls)),
+    path("register/", views.UserRegisterView.as_view(), name="user-register"),
+]

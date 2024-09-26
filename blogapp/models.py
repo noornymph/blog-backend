@@ -1,5 +1,6 @@
 """Models of the application."""
 
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils.text import slugify
 
@@ -27,6 +28,8 @@ class Post(models.Model):
     )
     created = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     thumbnail = models.ImageField(upload_to="thumbnails/", null=True, blank=True)
+    is_public = models.BooleanField(default=True)  # Add this line
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
         """Metadata about the Post model."""
@@ -47,3 +50,39 @@ class Post(models.Model):
             self.slug = unique_slug
 
         super().save(*args, **kwargs)
+
+
+class Favorite(models.Model):
+    """Model representing a user's favorite blog post."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+
+    class Meta:
+        """Meta options for the Favorite model."""
+
+        unique_together = ("user", "post")
+
+    def __str__(self):
+        """String representation of the Favorite model."""
+        return f"{self.user.username} favorited {self.post.title}"
+
+
+class Follow(models.Model):
+    """Model representing a follow relationship between users."""
+
+    follower = models.ForeignKey(
+        User, related_name="following", on_delete=models.CASCADE
+    )
+    followed = models.ForeignKey(
+        User, related_name="followers", on_delete=models.CASCADE
+    )
+
+    class Meta:
+        """Meta options for the Follow model."""
+
+        unique_together = ("follower", "followed")
+
+    def __str__(self):
+        """String representation of the Follow model."""
+        return f"{self.follower.username} follows {self.followed.username}"
