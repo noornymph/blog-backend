@@ -7,11 +7,23 @@ from rest_framework import serializers
 from .models import Follow, Post
 
 
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer for the user object to include in PostSerializer."""
+
+    class Meta:
+        """Metadata about the user serializer."""
+
+        model = User
+        fields = ["id", "username"]  # Include id and username
+
+
 class PostSerializer(serializers.ModelSerializer):
     """Serializer for the Post model."""
 
+    user = UserSerializer(read_only=True)  # Use the UserSerializer for the user field
+
     class Meta:
-        """Metadata about post serializer."""
+        """Metadata about the post serializer."""
 
         model = Post
         fields = "__all__"
@@ -32,17 +44,16 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        # You can choose to leave this empty if you don't plan to create a user instance
         raise NotImplementedError(
             "This serializer is for login and does not create a user."
         )
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
     """Serializer for user registration."""
 
     class Meta:
-        """Metadata about user serializer."""
+        """Metadata about user registration serializer."""
 
         model = User
         fields = ("username", "email", "password")

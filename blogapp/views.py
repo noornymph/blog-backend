@@ -3,6 +3,7 @@
 from django.contrib.auth.models import User
 from rest_framework import generics, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticated,
@@ -10,6 +11,7 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Categories, Favorite, Follow, Post
 from .serializers import (
@@ -75,7 +77,7 @@ class PostModelViewSet(ModelViewSet):
 
 
 class FollowView(viewsets.ModelViewSet):
-    """View for handling follow relationships between users."""
+    """View set for following other users"""
 
     queryset = Follow.objects.all()
     permission_classes = [IsAuthenticated]
@@ -83,7 +85,33 @@ class FollowView(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Save a new follow instance with the authenticated user."""
-        serializer.save(follower=self.request.user)
+        follower = self.request.user
+        followed_user_id = self.request.data.get("followed_user_id")
+
+        # Check if followed_user_id is provided
+        if followed_user_id is None:
+            raise ValidationError("followed_user_id is required.")
+
+        # Prevent users from following themselves
+        if int(followed_user_id) == follower.id:  # Ensure both are integers
+            raise ValidationError("You cannot follow yourself.")
+
+        try:
+            followed_user = User.objects.get(id=followed_user_id)
+        except User.DoesNotExist:
+            raise ValidationError("User not found.")
+
+        # Check if the follow relationship already exists
+        existing_follow = Follow.objects.filter(
+            follower=follower, followed_user=followed_user
+        ).first()
+        if existing_follow:
+            raise ValidationError(
+                "You are already following this user."
+            )  # Raise an error instead of returning
+
+        # If all checks pass, save the follow relationship
+        serializer.save(follower=follower, followed_user=followed_user)
 
 
 class LoginView(generics.GenericAPIView):
@@ -99,9 +127,13 @@ class LoginView(generics.GenericAPIView):
         user = serializer.validated_data["user"]
         refresh = RefreshToken.for_user(user)
 
+        # Serialize user data to include in the response
+        user_data = UserSerializer(user).data  # Serialize the user data
+
         return Response(
             {
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
+                "user": user_data,  # Include serialized user data in the response
             }
         )
